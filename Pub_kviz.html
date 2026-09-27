@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pub Kviz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#171225; --bg2:#211a35; --card:#26203d; --border:#3d3460;
+    --text:#f4f0ff; --muted:#a89bd1;
+    --gold:#f2b705; --gold-dim:rgba(242,183,5,.18);
+    --ok:#34d399; --half:#fbbf24; --bad:#f87171;
+  }
+  * { box-sizing:border-box; }
+  body {
+    font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text);
+    margin:0; padding:28px 20px; min-height:100vh;
+    background-image:radial-gradient(circle at 15% 0%, var(--bg2), var(--bg) 60%);
+  }
+  .wrap { max-width:1500px; width:96%; margin:0 auto; }
+  h1 { font-family:'Inter',sans-serif; font-weight:900; font-size:clamp(2.2rem,5vw,3.6rem); margin:0 0 24px; letter-spacing:-.5px; }
+  h2 { font-family:'Inter',sans-serif; font-weight:700; font-size:clamp(1.8rem,4vw,2.8rem); margin:0; color:var(--muted); }
+  .pitanje {
+    background:var(--card); border:1px solid var(--border); padding:40px 48px; border-radius:20px;
+    font-family:'Inter',sans-serif; font-weight:700; font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1.35;
+    margin:20px 0 24px; box-shadow:0 12px 30px rgba(0,0,0,.35); text-align:center;
+  }
+  .timer { font-family:'Inter',sans-serif; font-size:clamp(3.5rem,9vw,6rem); font-weight:900; color:var(--gold); margin-bottom:22px; text-align:center; }
+  .btn {
+    padding:14px 24px; border:none; border-radius:10px; background:var(--card); border:1px solid var(--border);
+    color:var(--text); font-family:'Inter',sans-serif; font-weight:700; font-size:1.05rem; cursor:pointer; margin:4px 4px 4px 0;
+    transition:transform .1s ease;
+  }
+  .btn:hover:not(:disabled) { transform:translateY(-1px); border-color:var(--gold); }
+  .btn.primary { background:var(--gold); color:#171225; border-color:var(--gold); }
+  .btn.danger { background:transparent; color:var(--bad); border-color:var(--bad); }
+  .btn.success { background:var(--ok); color:#0b2f22; border-color:var(--ok); }
+  .btn:disabled { opacity:.35; cursor:default; }
+  .btnrow { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:18px; }
+  textarea, input[type=number] {
+    font-family:'Inter',inherit; font-size:1.15rem; padding:14px; border-radius:10px;
+    border:1px solid var(--border); background:var(--bg2); color:var(--text); width:100%;
+  }
+  textarea:focus, input:focus { outline:none; border-color:var(--gold); }
+  .poslato { background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold); padding:32px 20px; border-radius:12px; font-weight:800; font-size:clamp(1.8rem,3.5vw,2.6rem); text-align:center; }
+  .bojegrid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .bojebtn { padding:26px 16px; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:1.25rem; font-weight:700; cursor:pointer; box-shadow:0 8px 18px rgba(0,0,0,.3); }
+  .bojebtn:disabled { opacity:.3; }
+  .mojaboja { display:inline-block; padding:8px 18px; border-radius:24px; font-weight:800; margin-bottom:20px; font-family:'Inter',sans-serif; }
+  .odglist { margin-bottom:20px; display:flex; flex-direction:column; gap:8px; }
+  .odgred { background:var(--card); border-left:6px solid #999; padding:14px 16px; border-radius:8px; display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+  .odgred.prazno { opacity:.45; }
+  .bojaznak { width:14px; height:14px; border-radius:50%; display:inline-block; flex-shrink:0; }
+  .odgtxt { flex:1; font-size:1.1rem; }
+  .ocjbtns { margin-left:auto; }
+  .ocj { border:none; border-radius:8px; padding:8px 14px; margin-left:5px; cursor:pointer; background:var(--bg2); color:var(--text); font-size:1.1rem; font-weight:700; }
+  .ocj.sel-t { background:var(--ok); color:#0b2f22; }
+  .ocj.sel-p { background:var(--half); color:#3a2b00; }
+  .ocj.sel-n { background:var(--bad); color:#3a0b0b; }
+  .tacanOdg { margin-bottom:18px; color:var(--muted); font-size:1.1rem; }
+  .rangred { padding:18px 24px; border-radius:12px; margin-bottom:10px; font-size:1.3rem; font-weight:700; display:flex; align-items:center; gap:14px; font-family:'Inter',sans-serif; box-shadow:0 8px 18px rgba(0,0,0,.3); }
+  .rangred.mojtim { outline:4px solid var(--gold); }
+  .mjesto { font-weight:900; width:36px; }
+  details.odgovor-ref { margin-bottom:18px; color:var(--muted); font-size:1.05rem; }
+  details.odgovor-ref summary { cursor:pointer; }
+  #fsBtn { position:fixed; top:16px; right:16px; z-index:10; }
+</style>
+</head>
+<body>
+<div id="app">Učitavanje...</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ================== PODESI OVDJE ==================
+// Zalijepi svoj firebaseConfig iz Firebase konzole (Project settings > Your apps).
+const firebaseConfig = {
+  apiKey: "AIzaSyAczpqZcPRqPeD7TTIkUmYf8IsPRuyEEU8",
+  authDomain: "ekipna-igra.firebaseapp.com",
+  databaseURL: "https://ekipna-igra-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ekipna-igra",
+  storageBucket: "ekipna-igra.firebasestorage.app",
+  messagingSenderId: "300870802435",
+  appId: "1:300870802435:web:ee3c76b0005608ed044236"
+};
+// ====================================================
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const BOJE = [
+  {key:'plava', naziv:'Plava', hex:'#2563eb'},
+  {key:'zelena', naziv:'Zelena', hex:'#16a34a'},
+  {key:'crvena', naziv:'Crvena', hex:'#dc2626'},
+  {key:'crna', naziv:'Crna', hex:'#111827'},
+  {key:'siva', naziv:'Siva', hex:'#6b7280'},
+  {key:'bijela', naziv:'Bijela', hex:'#e5e7eb'},
+  {key:'zuta', naziv:'Žuta', hex:'#eab308'},
+  {key:'oranz', naziv:'Oranž', hex:'#f97316'}
+];
+const BODOVI = {tacno:2, pola:1, netacno:0};
+
+// ================== PITANJA (uredi ovdje po potrebi) ==================
+const PITANJA = [
+  {broj:1, tekst:"Koji je jedini glavni grad na svijetu koji graniči sa dvije nezavisne države?", odgovor:"Bratislava (graniči sa Austrijom i Mađarskom)"},
+  {broj:2, tekst:"Koji je bio službeni naziv današnjeg Istanbula od 330. do 1930. godine?", odgovor:"Konstantinopolj (Carigrad)"},
+  {broj:3, tekst:"Koja je jedina država na svijetu čija zastava nije četverouglasta?", odgovor:"Nepal"},
+  {broj:4, tekst:"Koji kultni film iz 1994. je režirao Quentin Tarantino, sa Travoltom, Jacksonom i Thurman?", odgovor:"Pulp Fiction"},
+  {broj:5, tekst:"Koji je britanski pevač rođen pod imenom Farrokh Bulsara?", odgovor:"Freddie Mercury"},
+  {broj:6, tekst:"Koja animirana franšiza prati igračke koje ožive kad ljudi nisu prisutni?", odgovor:"Toy Story"},
+  {broj:7, tekst:"Koji hemijski element ima simbol Sn?", odgovor:"Kalaj (Kositar)"},
+  {broj:8, tekst:"Koja je jedina vrsta sisara sposobna za aktivan, samostalan let?", odgovor:"Slijepi miš"},
+  {broj:9, tekst:"Koja planeta ima najbržu rotaciju, sa danom od svega oko 10 sati?", odgovor:"Jupiter"},
+  {broj:10, tekst:"Koja zemlja je osvojila najviše Svjetskih prvenstava u fudbalu (5 titula)?", odgovor:"Brazil"},
+  {broj:11, tekst:"U kom sportu se takmiči za trofej 'Stanley Cup'?", odgovor:"Hokej na ledu"},
+  {broj:12, tekst:"Koliko čunjeva ima na stazi na početku bacanja u kuglanju?", odgovor:"10"},
+  {broj:13, tekst:"Koji je najstariji poznati pisani jezik koji je koristio klinasto pismo?", odgovor:"Sumerski jezik"},
+  {broj:14, tekst:"Koje godine je potonuo Titanic?", odgovor:"1912."},
+  {broj:15, tekst:"Kako se zove najveći organ ljudskog tijela?", odgovor:"Koža"}
+];
+function bojaByKey(k){ return BOJE.find(b=>b.key===k); }
+function tamnoText(k){ return (k==='bijela'||k==='zuta') ? '#111' : '#fff'; }
+
+const params = new URLSearchParams(location.search);
+const ULOGA = params.get('rola')==='nastavnik' ? 'nastavnik' : 'ekipa';
+
+const stanjeRef = db.collection('kviz').doc('stanje');
+const timoviRef = db.collection('kviz').doc('timovi');
+const odgovoriRef = db.collection('odgovori');
+const app = document.getElementById('app');
+
+let audioCtx = null;
+function beep(freq, trajanjeMs){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    osc.start();
+    osc.stop(audioCtx.currentTime + trajanjeMs/1000);
+  }catch(e){}
+}
+
+let timerInterval = null;
+function pokreniTimerPrikaz(krajMs, elId){
+  if(timerInterval) clearInterval(timerInterval);
+  let zadnjaSekunda = null;
+  function tick(){
+    const el = document.getElementById(elId);
+    if(!el){ clearInterval(timerInterval); return; }
+    const s = Math.max(0, Math.round((krajMs - Date.now())/1000));
+    el.textContent = s + 's';
+    if(s>=1 && s<=5 && s!==zadnjaSekunda){ zadnjaSekunda=s; beep(880,150); }
+    if(s===0 && zadnjaSekunda!==0){ zadnjaSekunda=0; beep(220,500); clearInterval(timerInterval); }
+  }
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+async function osiguraStanje(){
+  const s = await stanjeRef.get();
+  if(!s.exists) await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1});
+  const t = await timoviRef.get();
+  if(!t.exists){ const init={}; BOJE.forEach(b=>init[b.key]=false); await timoviRef.set(init); }
+}
+osiguraStanje();
+
+if(ULOGA==='nastavnik'){
+  const fsBtn = document.createElement('button');
+  fsBtn.id = 'fsBtn';
+  fsBtn.className = 'btn';
+  fsBtn.textContent = '⛶ Cijeli ekran';
+  fsBtn.onclick = ()=> document.documentElement.requestFullscreen().catch(()=>{});
+  document.body.appendChild(fsBtn);
+  pokreniNastavnika();
+} else {
+  pokreniEkipu();
+}
+
+// ============================= NASTAVNIK =============================
+function pokreniNastavnika(){
+  let pitanja = PITANJA, stanje = null, pregledUnsub = null;
+
+  stanjeRef.onSnapshot(snap=>{ stanje = snap.data(); crtaj(); });
+
+  function crtaj(){
+    if(!stanje){ app.innerHTML='Učitavanje...'; return; }
+    if(stanje.faza==='cekanje') return crtajPocetak();
+    if(stanje.faza==='aktivno') return crtajAktivno();
+    if(stanje.faza==='pregled') return crtajPregled();
+    if(stanje.faza==='rang') return crtajRang();
+  }
+
+  function crtajPocetak(){
+    const linkEkipe = location.origin + location.pathname;
+    const qrSlika = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(linkEkipe);
+    app.innerHTML = `<div class="wrap">
+      <h1>Pub Kviz — Kontrolna tabla</h1>
+      <p>Pitanja spremna: <b>${pitanja.length}</b></p>
+      <div class="btnrow" style="align-items:flex-start;gap:28px;flex-wrap:wrap">
+        <div style="background:#fff;padding:12px;border-radius:16px;display:inline-block">
+          <img src="${qrSlika}" alt="QR kod za pristup kvizu" width="280" height="280" style="display:block">
+        </div>
+        <div>
+          <p style="color:var(--muted);margin:0 0 6px">Učenici skeniraju QR kod ili otvore link:</p>
+          <p style="word-break:break-all"><a href="${linkEkipe}" style="color:var(--gold);font-weight:700">${linkEkipe}</a></p>
+        </div>
+      </div>
+      <div class="btnrow"><label>Tajmer (sek): <input id="tsec" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label></div>
+      <div class="btnrow">
+        <button class="btn primary" id="startBtn" ${pitanja.length===0?'disabled':''}>▶ Pokreni Pitanje 1</button>
+        <button class="btn danger" id="resetBtn">🗑 Resetuj kviz</button>
+      </div>
+    </div>`;
+    document.getElementById('startBtn').onclick = async ()=>{
+      const sek = parseInt(document.getElementById('tsec').value)||45;
+      await stanjeRef.update({trenutnoPitanje:1, faza:'aktivno', timerSekunde:sek, timerKraj:null});
+    };
+    document.getElementById('resetBtn').onclick = async ()=>{
+      if(!confirm('Sigurno resetovati kviz, boje ekipa i sve odgovore?')) return;
+      const batch = db.batch();
+      const odg = await odgovoriRef.get();
+      odg.forEach(d=>batch.delete(d.ref));
+      await batch.commit();
+      const init={}; BOJE.forEach(b=>init[b.key]=false);
+      await timoviRef.set(init);
+      await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1});
+    };
+  }
+
+  function crtajAktivno(){
+    const p = pitanja.find(x=>x.broj===stanje.trenutnoPitanje);
+    app.innerHTML = `<div class="wrap">
+      <h2>Pitanje ${stanje.trenutnoPitanje} / ${pitanja.length}</h2>
+      <div class="pitanje">${p ? p.tekst : '(pitanje nije pronađeno)'}</div>
+      ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
+      <details class="odgovor-ref"><summary>Prikaži tačan odgovor</summary>${p ? p.odgovor : ''}</details>
+      <div class="btnrow">
+        <label>Tajmer (sek): <input id="tsec2" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label>
+        <button class="btn" id="startTimerBtn">▶ Pokreni tajmer</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn primary" id="nextBtn">${stanje.trenutnoPitanje>=pitanja.length ? 'Završi i pređi na pregled →' : 'Sljedeće pitanje →'}</button>
+      </div>
+    </div>`;
+    if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
+    document.getElementById('startTimerBtn').onclick = async ()=>{
+      const sek = parseInt(document.getElementById('tsec2').value)||stanje.timerSekunde;
+      await stanjeRef.update({timerSekunde:sek, timerKraj:Date.now()+sek*1000});
+    };
+    document.getElementById('nextBtn').onclick = async ()=>{
+      if(stanje.trenutnoPitanje >= pitanja.length) await stanjeRef.update({faza:'pregled', timerKraj:null, pregledPitanje:1});
+      else await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje+1, timerKraj:null});
+    };
+  }
+
+  function crtajPregled(){
+    const trenutno = stanje.pregledPitanje || 1;
+    const p = pitanja.find(x=>x.broj===trenutno);
+    if(pregledUnsub) pregledUnsub();
+    pregledUnsub = odgovoriRef.where('pitanje','==',trenutno).onSnapshot(snap=>{
+      const odgovori = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      const odgovoriliKeys = odgovori.map(o=>o.boja);
+      const nijeOdgovorilo = BOJE.filter(b=>!odgovoriliKeys.includes(b.key));
+      app.innerHTML = `<div class="wrap">
+        <div class="btnrow">
+          <button class="btn" id="prevQ" ${trenutno<=1?'disabled':''}>← Prethodno</button>
+          <h2 style="margin:0">Pregled — Pitanje ${trenutno} / ${pitanja.length}</h2>
+          <button class="btn" id="nextQ" ${trenutno>=pitanja.length?'disabled':''}>Sljedeće →</button>
+        </div>
+        <div class="pitanje">${p?p.tekst:''}</div>
+        <div class="tacanOdg">Tačan odgovor: <b>${p?p.odgovor:''}</b></div>
+        <div class="btnrow"><button class="btn primary" id="sveTacno">✓ Označi sve kao tačno</button></div>
+        <div class="odglist">
+          ${odgovori.map(o=>{ const b=bojaByKey(o.boja); return `<div class="odgred" style="border-left-color:${b.hex}">
+            <span class="bojaznak" style="background:${b.hex}"></span><b>${b.naziv}</b>: <span class="odgtxt">${o.tekst}</span>
+            <span class="ocjbtns">
+              <button class="ocj ${o.ocjena==='tacno'?'sel-t':''}" data-id="${o.id}" data-o="tacno">✓</button>
+              <button class="ocj ${o.ocjena==='pola'?'sel-p':''}" data-id="${o.id}" data-o="pola">±</button>
+              <button class="ocj ${o.ocjena==='netacno'?'sel-n':''}" data-id="${o.id}" data-o="netacno">✗</button>
+            </span></div>`; }).join('')}
+          ${nijeOdgovorilo.map(b=>`<div class="odgred prazno" style="border-left-color:${b.hex}"><span class="bojaznak" style="background:${b.hex}"></span><b>${b.naziv}</b>: <i>nema odgovora (0 bodova)</i></div>`).join('')}
+        </div>
+        <button class="btn success" id="prikaziRang">🏆 Prikaži rang listu</button>
+      </div>`;
+      document.getElementById('prevQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno-1});
+      document.getElementById('nextQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno+1});
+      document.getElementById('sveTacno').onclick = async ()=>{
+        const batch = db.batch();
+        odgovori.forEach(o=>batch.update(odgovoriRef.doc(o.id), {ocjena:'tacno'}));
+        await batch.commit();
+      };
+      document.getElementById('prikaziRang').onclick = ()=>stanjeRef.update({faza:'rang'});
+      document.querySelectorAll('.ocj').forEach(btn=>{
+        btn.onclick = ()=>odgovoriRef.doc(btn.dataset.id).update({ocjena:btn.dataset.o});
+      });
+    });
+  }
+
+  function crtajRang(){
+    odgovoriRef.get().then(snap=>{
+      const bodovi={}; BOJE.forEach(b=>bodovi[b.key]=0);
+      snap.forEach(d=>{ const o=d.data(); bodovi[o.boja]=(bodovi[o.boja]||0)+(BODOVI[o.ocjena]||0); });
+      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0})).sort((a,b)=>b.bod-a.bod);
+      app.innerHTML = `<div class="wrap"><h1>🏆 Rang lista</h1>
+        ${lista.map((t,i)=>`<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b></div>`).join('')}
+        <div class="btnrow">
+          <button class="btn" id="natragBtn">← Nazad na pregled</button>
+          <button class="btn" id="pocetakBtn">⟲ Povratak na početak kviza</button>
+        </div>
+      </div>`;
+      document.getElementById('natragBtn').onclick = ()=>stanjeRef.update({faza:'pregled'});
+      document.getElementById('pocetakBtn').onclick = ()=>stanjeRef.update({faza:'cekanje'});
+    });
+  }
+}
+
+// ============================== EKIPA ==============================
+function pokreniEkipu(){
+  let mojaBoja = localStorage.getItem('pubkviz_boja');
+  let stanje = null, timovi = null;
+
+  stanjeRef.onSnapshot(snap=>{ stanje = snap.data(); crtaj(); });
+  timoviRef.onSnapshot(snap=>{ timovi = snap.data(); if(!mojaBoja) crtaj(); });
+
+  function crtaj(){
+    if(!mojaBoja) return crtajBirajBoju();
+    if(!stanje){ app.innerHTML='Učitavanje...'; return; }
+    if(stanje.faza==='cekanje') return crtajCekanje();
+    if(stanje.faza==='aktivno') return crtajPitanje();
+    if(stanje.faza==='pregled') return crtajCekaRang();
+    if(stanje.faza==='rang') return crtajRangEkipa();
+  }
+
+  function crtajBirajBoju(){
+    const t = timovi || {};
+    app.innerHTML = `<div class="wrap"><h1>Odaberi svoju boju</h1><div class="bojegrid">
+      ${BOJE.map(b=>`<button class="bojebtn" style="background:${b.hex};color:${tamnoText(b.key)}" data-k="${b.key}" ${t[b.key]?'disabled':''}>${b.naziv}${t[b.key]?' (zauzeto)':''}</button>`).join('')}
+    </div></div>`;
+    document.querySelectorAll('.bojebtn').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const k = btn.dataset.k;
+        const ok = await db.runTransaction(async tr=>{
+          const doc = await tr.get(timoviRef);
+          if(doc.data()[k]) return false;
+          tr.update(timoviRef, {[k]:true});
+          return true;
+        });
+        if(ok){ mojaBoja=k; localStorage.setItem('pubkviz_boja', k); crtaj(); }
+        else alert('Ta boja je upravo zauzeta, izaberi drugu.');
+      };
+    });
+  }
+
+  function bedz(){ const b=bojaByKey(mojaBoja); return `<div class="mojaboja" style="background:${b.hex};color:${tamnoText(b.key)}">${b.naziv}</div>`; }
+
+  function crtajCekanje(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Čekaj da nastavnik pokrene kviz...</h2></div>`; }
+
+  function crtajPitanje(){
+    const brojP = stanje.trenutnoPitanje;
+    const docId = brojP+'_'+mojaBoja;
+    odgovoriRef.doc(docId).get().then(snap=>{
+      const poslato = snap.exists;
+      app.innerHTML = `<div class="wrap">${bedz()}<h2>Pitanje ${brojP}</h2>
+        ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
+        ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>` :
+          `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
+           <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
+      </div>`;
+      if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
+      if(!poslato){
+        document.getElementById('posaljiBtn').onclick = async ()=>{
+          const txt = document.getElementById('odgTxt').value.trim();
+          if(!txt) return;
+          await odgovoriRef.doc(docId).set({pitanje:brojP, boja:mojaBoja, tekst:txt, ocjena:null});
+          crtajPitanje();
+        };
+      }
+    });
+  }
+
+  function crtajCekaRang(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Nastavnik pregleda odgovore...</h2><p>Rang lista stiže uskoro.</p></div>`; }
+
+  function crtajRangEkipa(){
+    odgovoriRef.get().then(snap=>{
+      const bodovi={}; BOJE.forEach(b=>bodovi[b.key]=0);
+      snap.forEach(d=>{ const o=d.data(); bodovi[o.boja]=(bodovi[o.boja]||0)+(BODOVI[o.ocjena]||0); });
+      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0})).sort((a,b)=>b.bod-a.bod);
+      app.innerHTML = `<div class="wrap">${bedz()}<h1>🏆 Rang lista</h1>
+        ${lista.map((t,i)=>`<div class="rangred ${t.key===mojaBoja?'mojtim':''}" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod}</b></div>`).join('')}
+      </div>`;
+    });
+  }
+}
+</script>
+</body>
+</html>
