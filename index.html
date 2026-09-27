@@ -65,7 +65,9 @@
   .mjesto { font-weight:900; width:36px; }
   details.odgovor-ref { margin-bottom:18px; color:var(--muted); font-size:1.05rem; }
   details.odgovor-ref summary { cursor:pointer; }
-  #fsBtn { position:fixed; top:16px; right:16px; z-index:10; }
+  #fsBtn, #resetBtnGlobal { position:fixed; top:16px; z-index:10; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; font-size:1.3rem; border-radius:50%; }
+  #fsBtn { right:16px; }
+  #resetBtnGlobal { right:68px; }
 </style>
 </head>
 <body>
@@ -94,7 +96,7 @@ const BOJE = [
   {key:'plava', naziv:'Plava', hex:'#2563eb'},
   {key:'zelena', naziv:'Zelena', hex:'#16a34a'},
   {key:'crvena', naziv:'Crvena', hex:'#dc2626'},
-  {key:'crna', naziv:'Crna', hex:'#111827'},
+  {key:'crna', naziv:'Smeđa', hex:'#7c4a24'},
   {key:'siva', naziv:'Siva', hex:'#6b7280'},
   {key:'bijela', naziv:'Bijela', hex:'#e5e7eb'},
   {key:'zuta', naziv:'Žuta', hex:'#eab308'},
@@ -102,32 +104,72 @@ const BOJE = [
 ];
 const BODOVI = {tacno:2, pola:1, netacno:0};
 
-// ================== PITANJA (uredi ovdje po potrebi) ==================
-const PITANJA = [
-  {broj:1, tekst:"Koji je jedini glavni grad na svijetu koji graniči sa dvije nezavisne države?", odgovor:"Bratislava (graniči sa Austrijom i Mađarskom)"},
-  {broj:2, tekst:"Koji je bio službeni naziv današnjeg Istanbula od 330. do 1930. godine?", odgovor:"Konstantinopolj (Carigrad)"},
-  {broj:3, tekst:"Koja je jedina država na svijetu čija zastava nije četverouglasta?", odgovor:"Nepal"},
-  {broj:4, tekst:"Koji kultni film iz 1994. je režirao Quentin Tarantino, sa Travoltom, Jacksonom i Thurman?", odgovor:"Pulp Fiction"},
-  {broj:5, tekst:"Koji je britanski pevač rođen pod imenom Farrokh Bulsara?", odgovor:"Freddie Mercury"},
-  {broj:6, tekst:"Koja animirana franšiza prati igračke koje ožive kad ljudi nisu prisutni?", odgovor:"Toy Story"},
-  {broj:7, tekst:"Koji hemijski element ima simbol Sn?", odgovor:"Kalaj (Kositar)"},
-  {broj:8, tekst:"Koja je jedina vrsta sisara sposobna za aktivan, samostalan let?", odgovor:"Slijepi miš"},
-  {broj:9, tekst:"Koja planeta ima najbržu rotaciju, sa danom od svega oko 10 sati?", odgovor:"Jupiter"},
-  {broj:10, tekst:"Koja zemlja je osvojila najviše Svjetskih prvenstava u fudbalu (5 titula)?", odgovor:"Brazil"},
-  {broj:11, tekst:"U kom sportu se takmiči za trofej 'Stanley Cup'?", odgovor:"Hokej na ledu"},
-  {broj:12, tekst:"Koliko čunjeva ima na stazi na početku bacanja u kuglanju?", odgovor:"10"},
-  {broj:13, tekst:"Koji je najstariji poznati pisani jezik koji je koristio klinasto pismo?", odgovor:"Sumerski jezik"},
-  {broj:14, tekst:"Koje godine je potonuo Titanic?", odgovor:"1912."},
-  {broj:15, tekst:"Kako se zove najveći organ ljudskog tijela?", odgovor:"Koža"}
-];
+// ================== PITANJA (sada se učitavaju iz baze, uređuju kroz "📝 Uredi pitanja") ==================
+const PITANJA_PO_KRUGU_DEFAULT = 15;
+// Ovaj tekst se koristi SAMO prvi put, dok baza nema sačuvana pitanja (podrazumijevani/početni set).
+const PITANJA_DEFAULT_TEKST =
+`Koji je jedini glavni grad na svijetu koji graniči sa dvije nezavisne države? | Bratislava (graniči sa Austrijom i Mađarskom)
+Koji je bio službeni naziv današnjeg Istanbula od 330. do 1930. godine? | Konstantinopolj (Carigrad)
+Koja je jedina država na svijetu čija zastava nije četverouglasta? | Nepal
+Koji kultni film iz 1994. je režirao Quentin Tarantino, sa Travoltom, Jacksonom i Thurman? | Pulp Fiction
+Koji je britanski pevač rođen pod imenom Farrokh Bulsara? | Freddie Mercury
+Koja animirana franšiza prati igračke koje ožive kad ljudi nisu prisutni? | Toy Story
+Koji hemijski element ima simbol Sn? | Kalaj (Kositar)
+Koja je jedina vrsta sisara sposobna za aktivan, samostalan let? | Slijepi miš
+Koja planeta ima najbržu rotaciju, sa danom od svega oko 10 sati? | Jupiter
+Koja zemlja je osvojila najviše Svjetskih prvenstava u fudbalu (5 titula)? | Brazil
+U kom sportu se takmiči za trofej 'Stanley Cup'? | Hokej na ledu
+Koliko čunjeva ima na stazi na početku bacanja u kuglanju? | 10
+Koji je najstariji poznati pisani jezik koji je koristio klinasto pismo? | Sumerski jezik
+Koje godine je potonuo Titanic? | 1912.
+Kako se zove najveći organ ljudskog tijela? | Koža
+[Krug 2 · Pitanje 1] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 2] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 3] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 4] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 5] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 6] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 7] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 8] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 9] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 10] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 11] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 12] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 13] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 14] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom
+[Krug 2 · Pitanje 15] Zamijeni ovo pravim pitanjem | Zamijeni ovo pravim odgovorom`;
+
+// Pretvara sirovi tekst (jedno "pitanje | odgovor" po redu) u niz objekata {broj, tekst, odgovor}.
+// Redovi bez '|' ili sa praznim dijelom se preskaču (ne ruše kviz).
+function parsirajPitanja(sirovoTekst){
+  const rezultat = [];
+  (sirovoTekst || '').split('\n').forEach(red=>{
+    const linija = red.trim();
+    if(!linija) return;
+    const idx = linija.indexOf('|');
+    if(idx === -1) return;
+    const tekst = linija.slice(0, idx).trim();
+    const odgovor = linija.slice(idx+1).trim();
+    if(!tekst || !odgovor) return;
+    rezultat.push({broj: rezultat.length+1, tekst, odgovor});
+  });
+  return rezultat;
+}
+function escapeHtml(str){
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 function bojaByKey(k){ return BOJE.find(b=>b.key===k); }
 function tamnoText(k){ return (k==='bijela'||k==='zuta') ? '#111' : '#fff'; }
 
+// Kratka riječ za pristup nastavniku, npr. link: ...html?zoni
+// (Promijeni "zoni" u bilo koju drugu riječ po želji.)
+const TAJNA_RIJEC_NASTAVNIK = 'zoni';
 const params = new URLSearchParams(location.search);
-const ULOGA = params.get('rola')==='nastavnik' ? 'nastavnik' : 'ekipa';
+const ULOGA = (params.has(TAJNA_RIJEC_NASTAVNIK) || params.get('rola')==='nastavnik') ? 'nastavnik' : 'ekipa';
 
 const stanjeRef = db.collection('kviz').doc('stanje');
 const timoviRef = db.collection('kviz').doc('timovi');
+const pitanjaRef = db.collection('kviz').doc('pitanja');
 const odgovoriRef = db.collection('odgovori');
 const app = document.getElementById('app');
 
@@ -162,9 +204,11 @@ function pokreniTimerPrikaz(krajMs, elId){
 
 async function osiguraStanje(){
   const s = await stanjeRef.get();
-  if(!s.exists) await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1});
+  if(!s.exists) await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1, krug:1});
   const t = await timoviRef.get();
   if(!t.exists){ const init={}; BOJE.forEach(b=>init[b.key]=false); await timoviRef.set(init); }
+  const p = await pitanjaRef.get();
+  if(!p.exists) await pitanjaRef.set({tekst: PITANJA_DEFAULT_TEKST, poKrugu: PITANJA_PO_KRUGU_DEFAULT});
 }
 osiguraStanje();
 
@@ -172,9 +216,28 @@ if(ULOGA==='nastavnik'){
   const fsBtn = document.createElement('button');
   fsBtn.id = 'fsBtn';
   fsBtn.className = 'btn';
-  fsBtn.textContent = '⛶ Cijeli ekran';
+  fsBtn.textContent = '⛶';
+  fsBtn.title = 'Cijeli ekran';
   fsBtn.onclick = ()=> document.documentElement.requestFullscreen().catch(()=>{});
   document.body.appendChild(fsBtn);
+
+  const resetBtnGlobal = document.createElement('button');
+  resetBtnGlobal.id = 'resetBtnGlobal';
+  resetBtnGlobal.className = 'btn danger';
+  resetBtnGlobal.textContent = '🗑';
+  resetBtnGlobal.title = 'Resetuj kviz';
+  resetBtnGlobal.onclick = async ()=>{
+    if(!confirm('Sigurno resetovati kviz, boje ekipa i sve odgovore?')) return;
+    const batch = db.batch();
+    const odg = await odgovoriRef.get();
+    odg.forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+    const init={}; BOJE.forEach(b=>init[b.key]=false);
+    await timoviRef.set(init);
+    await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1, krug:1});
+  };
+  document.body.appendChild(resetBtnGlobal);
+
   pokreniNastavnika();
 } else {
   pokreniEkipu();
@@ -182,16 +245,80 @@ if(ULOGA==='nastavnik'){
 
 // ============================= NASTAVNIK =============================
 function pokreniNastavnika(){
-  let pitanja = PITANJA, stanje = null, pregledUnsub = null;
+  let pitanja = [], sirovTekst = '', poKrugu = PITANJA_PO_KRUGU_DEFAULT, stanje = null, pregledUnsub = null, uredjivanje = false;
 
   stanjeRef.onSnapshot(snap=>{ stanje = snap.data(); crtaj(); });
+  pitanjaRef.onSnapshot(snap=>{
+    const d = snap.data() || {};
+    sirovTekst = d.tekst || '';
+    pitanja = parsirajPitanja(sirovTekst);
+    poKrugu = d.poKrugu || PITANJA_PO_KRUGU_DEFAULT;
+    crtaj();
+  });
+
+  function brKrugova(){ return Math.max(1, Math.ceil(pitanja.length / poKrugu)); }
 
   function crtaj(){
+    if(uredjivanje) return crtajUreditor();
     if(!stanje){ app.innerHTML='Učitavanje...'; return; }
     if(stanje.faza==='cekanje') return crtajPocetak();
     if(stanje.faza==='aktivno') return crtajAktivno();
     if(stanje.faza==='pregled') return crtajPregled();
+    if(stanje.faza==='medjurang') return crtajMedjurang();
     if(stanje.faza==='rang') return crtajRang();
+  }
+
+  function crtajUreditor(){
+    app.innerHTML = `<div class="wrap">
+      <h1>📝 Uredi pitanja</h1>
+      <p style="color:var(--muted)">Jedno pitanje po redu, u formatu: <b>pitanje | odgovor</b>. Redoslijed određuje raspored po krugovima (npr. prvih 15 = Krug 1, sljedećih 15 = Krug 2).</p>
+      <div class="btnrow">
+        <label>Pitanja po krugu: <input id="poKruguInput" type="number" min="1" value="${poKrugu}" style="width:80px"></label>
+        <span id="brojValidnih" style="color:var(--muted);font-weight:700"></span>
+      </div>
+      <textarea id="pitanjaText" rows="18" style="font-family:'Courier New',monospace;font-size:0.95rem" placeholder="Pitanje 1? | Odgovor 1
+Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
+      <div class="btnrow" style="margin-top:14px">
+        <button class="btn primary" id="snimiBtn">💾 Snimi</button>
+        <button class="btn" id="izvezBtn">⬇️ Izvezi (.txt)</button>
+        <button class="btn" id="uveziBtn">⬆️ Uvezi (.txt)</button>
+        <input type="file" id="uveziInput" accept=".txt,text/plain" style="display:none">
+        <button class="btn danger" id="otkaziBtn">← Nazad bez snimanja</button>
+      </div>
+    </div>`;
+    const ta = document.getElementById('pitanjaText');
+    function osvjeziBrojac(){
+      const parsed = parsirajPitanja(ta.value);
+      const linije = ta.value.split('\n').map(r=>r.trim()).filter(r=>r.length>0);
+      const nevalidnih = linije.length - parsed.length;
+      document.getElementById('brojValidnih').textContent = `✓ ${parsed.length} validnih pitanja` +
+        (nevalidnih>0 ? ` · ⚠ ${nevalidnih} red(ova) bez '|' — biće preskočeni` : '');
+    }
+    ta.oninput = osvjeziBrojac;
+    osvjeziBrojac();
+
+    document.getElementById('otkaziBtn').onclick = ()=>{ uredjivanje=false; crtaj(); };
+    document.getElementById('snimiBtn').onclick = async ()=>{
+      const noviPoKrugu = parseInt(document.getElementById('poKruguInput').value)||PITANJA_PO_KRUGU_DEFAULT;
+      await pitanjaRef.set({tekst: ta.value, poKrugu: noviPoKrugu});
+      uredjivanje=false;
+    };
+    document.getElementById('izvezBtn').onclick = ()=>{
+      const blob = new Blob([ta.value], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'pitanja-kviz.txt';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+    document.getElementById('uveziBtn').onclick = ()=> document.getElementById('uveziInput').click();
+    document.getElementById('uveziInput').onchange = (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{ ta.value = reader.result; osvjeziBrojac(); };
+      reader.readAsText(file, 'UTF-8');
+    };
   }
 
   function crtajPocetak(){
@@ -199,7 +326,7 @@ function pokreniNastavnika(){
     const qrSlika = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(linkEkipe);
     app.innerHTML = `<div class="wrap">
       <h1>Pub Kviz — Kontrolna tabla</h1>
-      <p>Pitanja spremna: <b>${pitanja.length}</b></p>
+      <p>Pitanja spremna: <b>${pitanja.length}</b> (${brKrugova()} ${brKrugova()===1?'krug':'kruga'} po ${poKrugu} pitanja)</p>
       <div class="btnrow" style="align-items:flex-start;gap:28px;flex-wrap:wrap">
         <div style="background:#fff;padding:12px;border-radius:16px;display:inline-block">
           <img src="${qrSlika}" alt="QR kod za pristup kvizu" width="280" height="280" style="display:block">
@@ -211,30 +338,28 @@ function pokreniNastavnika(){
       </div>
       <div class="btnrow"><label>Tajmer (sek): <input id="tsec" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label></div>
       <div class="btnrow">
+        <button class="btn" id="urediBtn">📝 Uredi pitanja</button>
         <button class="btn primary" id="startBtn" ${pitanja.length===0?'disabled':''}>▶ Pokreni Pitanje 1</button>
-        <button class="btn danger" id="resetBtn">🗑 Resetuj kviz</button>
       </div>
     </div>`;
+    document.getElementById('urediBtn').onclick = ()=>{ uredjivanje=true; crtaj(); };
     document.getElementById('startBtn').onclick = async ()=>{
       const sek = parseInt(document.getElementById('tsec').value)||45;
-      await stanjeRef.update({trenutnoPitanje:1, faza:'aktivno', timerSekunde:sek, timerKraj:null});
-    };
-    document.getElementById('resetBtn').onclick = async ()=>{
-      if(!confirm('Sigurno resetovati kviz, boje ekipa i sve odgovore?')) return;
-      const batch = db.batch();
-      const odg = await odgovoriRef.get();
-      odg.forEach(d=>batch.delete(d.ref));
-      await batch.commit();
-      const init={}; BOJE.forEach(b=>init[b.key]=false);
-      await timoviRef.set(init);
-      await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1});
+      await stanjeRef.update({trenutnoPitanje:1, faza:'aktivno', timerSekunde:sek, timerKraj:null, krug:1});
     };
   }
 
   function crtajAktivno(){
     const p = pitanja.find(x=>x.broj===stanje.trenutnoPitanje);
+    const krug = stanje.krug || Math.ceil(stanje.trenutnoPitanje/poKrugu);
+    const brojUKrugu = ((stanje.trenutnoPitanje-1) % poKrugu) + 1;
+    const zadnjePitanjeUkupno = stanje.trenutnoPitanje >= pitanja.length;
+    const zadnjeUKrugu = stanje.trenutnoPitanje % poKrugu === 0;
+    let labelDugme = 'Sljedeće pitanje →';
+    if(zadnjePitanjeUkupno) labelDugme = 'Završi i pređi na pregled →';
+    else if(zadnjeUKrugu) labelDugme = `Završi Krug ${krug} i pređi na pregled →`;
     app.innerHTML = `<div class="wrap">
-      <h2>Pitanje ${stanje.trenutnoPitanje} / ${pitanja.length}</h2>
+      <h2 style="text-align:center">Krug ${krug}/${brKrugova()} — Pitanje ${brojUKrugu} / ${poKrugu}</h2>
       <div class="pitanje">${p ? p.tekst : '(pitanje nije pronađeno)'}</div>
       ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
       <details class="odgovor-ref"><summary>Prikaži tačan odgovor</summary>${p ? p.odgovor : ''}</details>
@@ -243,7 +368,7 @@ function pokreniNastavnika(){
         <button class="btn" id="startTimerBtn">▶ Pokreni tajmer</button>
       </div>
       <div class="btnrow">
-        <button class="btn primary" id="nextBtn">${stanje.trenutnoPitanje>=pitanja.length ? 'Završi i pređi na pregled →' : 'Sljedeće pitanje →'}</button>
+        <button class="btn primary" id="nextBtn">${labelDugme}</button>
       </div>
     </div>`;
     if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
@@ -252,13 +377,22 @@ function pokreniNastavnika(){
       await stanjeRef.update({timerSekunde:sek, timerKraj:Date.now()+sek*1000});
     };
     document.getElementById('nextBtn').onclick = async ()=>{
-      if(stanje.trenutnoPitanje >= pitanja.length) await stanjeRef.update({faza:'pregled', timerKraj:null, pregledPitanje:1});
-      else await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje+1, timerKraj:null});
+      if(zadnjeUKrugu){
+        const pocetakRunde = stanje.trenutnoPitanje - poKrugu + 1;
+        await stanjeRef.update({faza:'pregled', timerKraj:null, pregledPitanje:pocetakRunde});
+      } else {
+        await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje+1, timerKraj:null});
+      }
     };
   }
 
   function crtajPregled(){
     const trenutno = stanje.pregledPitanje || 1;
+    const krug = stanje.krug || Math.ceil(trenutno/poKrugu);
+    const pocetakRunde = (krug-1)*poKrugu + 1;
+    const krajRunde = krug*poKrugu;
+    const jeZadnjaRunda = krug >= brKrugova();
+    const brojUKrugu = trenutno - pocetakRunde + 1;
     const p = pitanja.find(x=>x.broj===trenutno);
     if(pregledUnsub) pregledUnsub();
     pregledUnsub = odgovoriRef.where('pitanje','==',trenutno).onSnapshot(snap=>{
@@ -267,9 +401,9 @@ function pokreniNastavnika(){
       const nijeOdgovorilo = BOJE.filter(b=>!odgovoriliKeys.includes(b.key));
       app.innerHTML = `<div class="wrap">
         <div class="btnrow">
-          <button class="btn" id="prevQ" ${trenutno<=1?'disabled':''}>← Prethodno</button>
-          <h2 style="margin:0">Pregled — Pitanje ${trenutno} / ${pitanja.length}</h2>
-          <button class="btn" id="nextQ" ${trenutno>=pitanja.length?'disabled':''}>Sljedeće →</button>
+          <button class="btn" id="prevQ" ${trenutno<=pocetakRunde?'disabled':''}>← Prethodno</button>
+          <h2 style="margin:0">Pregled — Krug ${krug}/${brKrugova()} — Pitanje ${brojUKrugu} / ${poKrugu}</h2>
+          <button class="btn" id="nextQ" ${trenutno>=krajRunde?'disabled':''}>Sljedeće →</button>
         </div>
         <div class="pitanje">${p?p.tekst:''}</div>
         <div class="tacanOdg">Tačan odgovor: <b>${p?p.odgovor:''}</b></div>
@@ -284,7 +418,7 @@ function pokreniNastavnika(){
             </span></div>`; }).join('')}
           ${nijeOdgovorilo.map(b=>`<div class="odgred prazno" style="border-left-color:${b.hex}"><span class="bojaznak" style="background:${b.hex}"></span><b>${b.naziv}</b>: <i>nema odgovora (0 bodova)</i></div>`).join('')}
         </div>
-        <button class="btn success" id="prikaziRang">🏆 Prikaži rang listu</button>
+        <button class="btn success" id="prikaziRang">${jeZadnjaRunda ? '🏆 Prikaži rang listu' : `🏆 Prikaži međurezultat (kraj Kruga ${krug})`}</button>
       </div>`;
       document.getElementById('prevQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno-1});
       document.getElementById('nextQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno+1});
@@ -293,9 +427,32 @@ function pokreniNastavnika(){
         odgovori.forEach(o=>batch.update(odgovoriRef.doc(o.id), {ocjena:'tacno'}));
         await batch.commit();
       };
-      document.getElementById('prikaziRang').onclick = ()=>stanjeRef.update({faza:'rang'});
+      document.getElementById('prikaziRang').onclick = ()=>stanjeRef.update({faza: jeZadnjaRunda ? 'rang' : 'medjurang'});
       document.querySelectorAll('.ocj').forEach(btn=>{
         btn.onclick = ()=>odgovoriRef.doc(btn.dataset.id).update({ocjena:btn.dataset.o});
+      });
+    });
+  }
+
+  function crtajMedjurang(){
+    const krugZavrsen = stanje.krug || 1;
+    const krajRunde = krugZavrsen*poKrugu;
+    odgovoriRef.where('pitanje','<=',krajRunde).get().then(snap=>{
+      const bodovi={}; BOJE.forEach(b=>bodovi[b.key]=0);
+      snap.forEach(d=>{ const o=d.data(); bodovi[o.boja]=(bodovi[o.boja]||0)+(BODOVI[o.ocjena]||0); });
+      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0})).sort((a,b)=>b.bod-a.bod);
+      const imaJosRundi = krugZavrsen < brKrugova();
+      app.innerHTML = `<div class="wrap"><h1>📊 Međurezultat — kraj Kruga ${krugZavrsen}/${brKrugova()}</h1>
+        ${lista.map((t,i)=>`<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b></div>`).join('')}
+        <div class="btnrow">
+          <button class="btn" id="natragBtn">← Nazad na pregled</button>
+          ${imaJosRundi ? `<button class="btn primary" id="sljedecaRundaBtn">▶ Pokreni Krug ${krugZavrsen+1}</button>` : ''}
+        </div>
+      </div>`;
+      document.getElementById('natragBtn').onclick = ()=>stanjeRef.update({faza:'pregled'});
+      const btnSljedeca = document.getElementById('sljedecaRundaBtn');
+      if(btnSljedeca) btnSljedeca.onclick = ()=>stanjeRef.update({
+        trenutnoPitanje: krajRunde+1, faza:'aktivno', krug: krugZavrsen+1, timerKraj:null
       });
     });
   }
@@ -303,10 +460,23 @@ function pokreniNastavnika(){
   function crtajRang(){
     odgovoriRef.get().then(snap=>{
       const bodovi={}; BOJE.forEach(b=>bodovi[b.key]=0);
-      snap.forEach(d=>{ const o=d.data(); bodovi[o.boja]=(bodovi[o.boja]||0)+(BODOVI[o.ocjena]||0); });
-      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0})).sort((a,b)=>b.bod-a.bod);
-      app.innerHTML = `<div class="wrap"><h1>🏆 Rang lista</h1>
-        ${lista.map((t,i)=>`<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b></div>`).join('')}
+      const bodoviPoKrugu = {}; BOJE.forEach(b=>bodoviPoKrugu[b.key]={});
+      snap.forEach(d=>{
+        const o=d.data();
+        const poeni = BODOVI[o.ocjena]||0;
+        bodovi[o.boja]=(bodovi[o.boja]||0)+poeni;
+        const k = Math.ceil(o.pitanje/poKrugu);
+        bodoviPoKrugu[o.boja][k] = (bodoviPoKrugu[o.boja][k]||0)+poeni;
+      });
+      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0, bodPoKrugu:bodoviPoKrugu[b.key]||{}})).sort((a,b)=>b.bod-a.bod);
+      app.innerHTML = `<div class="wrap"><h1>🏆 Konačna rang lista</h1>
+        ${lista.map((t,i)=>{
+          const detaljno = Array.from({length:brKrugova()}, (_,k)=>`R${k+1}: ${t.bodPoKrugu[k+1]||0}`).join(' · ');
+          return `<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)}">
+            <span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b>
+            <span style="margin-left:auto;font-weight:600;font-size:.95rem;opacity:.85">${detaljno}</span>
+          </div>`;
+        }).join('')}
         <div class="btnrow">
           <button class="btn" id="natragBtn">← Nazad na pregled</button>
           <button class="btn" id="pocetakBtn">⟲ Povratak na početak kviza</button>
@@ -321,10 +491,18 @@ function pokreniNastavnika(){
 // ============================== EKIPA ==============================
 function pokreniEkipu(){
   let mojaBoja = localStorage.getItem('pubkviz_boja');
-  let stanje = null, timovi = null;
+  let stanje = null, timovi = null, pitanja = [], poKrugu = PITANJA_PO_KRUGU_DEFAULT;
 
   stanjeRef.onSnapshot(snap=>{ stanje = snap.data(); crtaj(); });
   timoviRef.onSnapshot(snap=>{ timovi = snap.data(); if(!mojaBoja) crtaj(); });
+  pitanjaRef.onSnapshot(snap=>{
+    const d = snap.data() || {};
+    pitanja = parsirajPitanja(d.tekst || '');
+    poKrugu = d.poKrugu || PITANJA_PO_KRUGU_DEFAULT;
+    crtaj();
+  });
+
+  function brKrugova(){ return Math.max(1, Math.ceil(pitanja.length / poKrugu)); }
 
   function crtaj(){
     if(!mojaBoja) return crtajBirajBoju();
@@ -332,6 +510,7 @@ function pokreniEkipu(){
     if(stanje.faza==='cekanje') return crtajCekanje();
     if(stanje.faza==='aktivno') return crtajPitanje();
     if(stanje.faza==='pregled') return crtajCekaRang();
+    if(stanje.faza==='medjurang') return crtajMedjuragEkipa();
     if(stanje.faza==='rang') return crtajRangEkipa();
   }
 
@@ -376,10 +555,12 @@ function pokreniEkipu(){
 
   function crtajPitanje(){
     const brojP = stanje.trenutnoPitanje;
+    const krug = stanje.krug || Math.ceil(brojP/poKrugu);
+    const brojUKrugu = ((brojP-1) % poKrugu) + 1;
     const docId = brojP+'_'+mojaBoja;
     odgovoriRef.doc(docId).get().then(snap=>{
       const poslato = snap.exists;
-      app.innerHTML = `<div class="wrap">${bedz()}<h2>Pitanje ${brojP}</h2>
+      app.innerHTML = `<div class="wrap">${bedz()}<h2 style="text-align:center">Krug ${krug}/${brKrugova()} — Pitanje ${brojUKrugu} / ${poKrugu}</h2>
         ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
         ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>` :
           `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
@@ -399,6 +580,21 @@ function pokreniEkipu(){
   }
 
   function crtajCekaRang(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Nastavnik pregleda odgovore...</h2><p>Rang lista stiže uskoro.</p></div>`; vezistiPromjenuBoje(); }
+
+  function crtajMedjuragEkipa(){
+    const krugZavrsen = stanje.krug || 1;
+    const krajRunde = krugZavrsen*poKrugu;
+    odgovoriRef.where('pitanje','<=',krajRunde).get().then(snap=>{
+      const bodovi={}; BOJE.forEach(b=>bodovi[b.key]=0);
+      snap.forEach(d=>{ const o=d.data(); bodovi[o.boja]=(bodovi[o.boja]||0)+(BODOVI[o.ocjena]||0); });
+      const lista = BOJE.map(b=>({...b, bod:bodovi[b.key]||0})).sort((a,b)=>b.bod-a.bod);
+      app.innerHTML = `<div class="wrap">${bedz()}<h1>📊 Međurezultat — kraj Kruga ${krugZavrsen}/${brKrugova()}</h1>
+        ${lista.map((t,i)=>`<div class="rangred ${t.key===mojaBoja?'mojtim':''}" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod}</b></div>`).join('')}
+        <p style="color:var(--muted)">Čekaj da nastavnik pokrene sljedeću rundu...</p>
+      </div>`;
+      vezistiPromjenuBoje();
+    });
+  }
 
   function crtajRangEkipa(){
     odgovoriRef.get().then(snap=>{
