@@ -59,7 +59,7 @@
   .ocj.sel-t { background:var(--ok); color:#0b2f22; }
   .ocj.sel-p { background:var(--half); color:#3a2b00; }
   .ocj.sel-n { background:var(--bad); color:#3a0b0b; }
-  .tacanOdg { margin-bottom:18px; color:var(--muted); font-size:1.1rem; }
+  .tacanOdg { margin-bottom:18px; color:var(--muted); font-size:clamp(1.4rem,2.8vw,2.1rem); text-align:center; font-weight:600; }
   .rangred { padding:18px 24px; border-radius:12px; margin-bottom:10px; font-size:1.3rem; font-weight:700; display:flex; align-items:center; gap:14px; font-family:'Inter',sans-serif; box-shadow:0 8px 18px rgba(0,0,0,.3); }
   .rangred.mojtim { outline:4px solid var(--gold); }
   .mjesto { font-weight:900; width:36px; }
@@ -355,9 +355,24 @@ function pokreniEkipu(){
     });
   }
 
-  function bedz(){ const b=bojaByKey(mojaBoja); return `<div class="mojaboja" style="background:${b.hex};color:${tamnoText(b.key)}">${b.naziv}</div>`; }
+  function bedz(){
+    const b=bojaByKey(mojaBoja);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <div class="mojaboja" style="margin-bottom:0;background:${b.hex};color:${tamnoText(b.key)}">${b.naziv}</div>
+      <button id="promBojaBtn" class="btn" style="padding:6px 12px;font-size:0.85rem;margin:0">Promijeni boju</button>
+    </div>`;
+  }
+  function vezistiPromjenuBoje(){
+    const el = document.getElementById('promBojaBtn');
+    if(el) el.onclick = ()=>{
+      if(!confirm('Obrisati tvoj sačuvani izbor boje na ovom uređaju? Moraćeš ponovo izabrati boju.')) return;
+      localStorage.removeItem('pubkviz_boja');
+      mojaBoja = null;
+      crtaj();
+    };
+  }
 
-  function crtajCekanje(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Čekaj da nastavnik pokrene kviz...</h2></div>`; }
+  function crtajCekanje(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Čekaj da nastavnik pokrene kviz...</h2></div>`; vezistiPromjenuBoje(); }
 
   function crtajPitanje(){
     const brojP = stanje.trenutnoPitanje;
@@ -371,6 +386,7 @@ function pokreniEkipu(){
            <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
       </div>`;
       if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
+      vezistiPromjenuBoje();
       if(!poslato){
         document.getElementById('posaljiBtn').onclick = async ()=>{
           const txt = document.getElementById('odgTxt').value.trim();
@@ -382,7 +398,7 @@ function pokreniEkipu(){
     });
   }
 
-  function crtajCekaRang(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Nastavnik pregleda odgovore...</h2><p>Rang lista stiže uskoro.</p></div>`; }
+  function crtajCekaRang(){ app.innerHTML = `<div class="wrap">${bedz()}<h2>Nastavnik pregleda odgovore...</h2><p>Rang lista stiže uskoro.</p></div>`; vezistiPromjenuBoje(); }
 
   function crtajRangEkipa(){
     odgovoriRef.get().then(snap=>{
@@ -392,6 +408,7 @@ function pokreniEkipu(){
       app.innerHTML = `<div class="wrap">${bedz()}<h1>🏆 Rang lista</h1>
         ${lista.map((t,i)=>`<div class="rangred ${t.key===mojaBoja?'mojtim':''}" style="background:${t.hex};color:${tamnoText(t.key)}"><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod}</b></div>`).join('')}
       </div>`;
+      vezistiPromjenuBoje();
     });
   }
 }
