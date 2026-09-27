@@ -306,7 +306,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
           <img src="${qrSlika}" alt="QR kod za pristup kvizu" width="380" height="380" style="display:block">
         </div>
       </div>
-      <div class="btnrow" style="justify-content:center"><label>Tajmer (sek): <input id="tsec" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label></div>
+      <div class="btnrow" style="justify-content:center"><label>Vrijem odgovora: <input id="tsec" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label></div>
       <div class="btnrow" style="justify-content:center">
         <button class="btn" id="urediBtn">📝 Uredi pitanja</button>
         <button class="btn primary" id="startBtn" ${pitanja.length===0?'disabled':''}>▶ Pokreni Pitanje 1</button>
@@ -337,7 +337,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
       ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
       <details class="odgovor-ref"><summary>Prikaži tačan odgovor</summary>${p ? p.odgovor : ''}</details>
       <div class="btnrow" style="justify-content:center">
-        <label>Tajmer (sek): <input id="tsec2" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label>
+        <label>Vrijeme odgovora: <input id="tsec2" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label>
         <button class="btn" id="startTimerBtn">▶ Pokreni tajmer</button>
       </div>
       <div class="btnrow" style="justify-content:center">
