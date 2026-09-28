@@ -122,10 +122,14 @@ function parsirajPitanja(sirovoTekst){
     if(!linija) return;
     const idx = linija.indexOf('|');
     if(idx === -1) return;
-    const tekst = linija.slice(0, idx).trim();
+    let tekst = linija.slice(0, idx).trim();
     const odgovor = linija.slice(idx+1).trim();
+    // Oznaka [povezi] na početku pitanja = pitanje tipa povezivanje (samo uključuje hint ekipama)
+    let povezi = false;
+    const m = tekst.match(/^\[povezi\]\s*/i);
+    if(m){ povezi = true; tekst = tekst.slice(m[0].length).trim(); }
     if(!tekst || !odgovor) return;
-    rezultat.push({broj: rezultat.length+1, tekst, odgovor});
+    rezultat.push({broj: rezultat.length+1, tekst, odgovor, povezi});
   });
   return rezultat;
 }
@@ -299,7 +303,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     const linkEkipe = location.origin + location.pathname;
     const qrSlika = 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + encodeURIComponent(linkEkipe);
     app.innerHTML = `<div class="wrap" style="text-align:center">
-      <h1>Pub Kviz — Start</h1>
+      <h1>Pub Kviz —  Start</h1>
       <p>Pitanja spremna: <b>${pitanja.length}</b> (${brKrugova()} ${brKrugova()===1?'krug':'kruga'} po ${poKrugu} pitanja)</p>
       <div style="display:flex; justify-content:center; margin:20px 0 28px">
         <div style="background:#fff;padding:16px;border-radius:20px;display:inline-block">
@@ -535,6 +539,8 @@ function pokreniEkipu(){
     const krug = stanje.krug || Math.ceil(brojP/poKrugu);
     const brojUKrugu = ((brojP-1) % poKrugu) + 1;
     const docId = brojP+'_'+mojaBoja;
+    const pTrenutno = pitanja.find(x=>x.broj===brojP);
+    const jePovezi = !!(pTrenutno && pTrenutno.povezi);
     odgovoriRef.doc(docId).get().then(snap=>{
       const poslato = snap.exists;
       app.innerHTML = `<div class="wrap">${bedz()}
@@ -545,6 +551,7 @@ function pokreniEkipu(){
         ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
         ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>` :
           `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
+           ${jePovezi ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši 4 pojma odvojena zarezom</p>` : ''}
            <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
       </div>`;
       if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
