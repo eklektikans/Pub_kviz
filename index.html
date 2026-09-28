@@ -126,11 +126,12 @@ function parsirajPitanja(sirovoTekst){
     const odgovor = linija.slice(idx+1).trim();
     // Oznaka [povezi] na početku pitanja = pitanje tipa povezivanje (samo uključuje hint ekipama)
     let povezi = false;
-    const m = tekst.match(/^\[povezi\]\s*/i);
+    tekst = tekst.replace(/^[\u200B-\u200D\uFEFF\s]+/, '');
+    const m = tekst.match(/^\[?\s*povezi\s*\]\s*/i);
     if(m){ povezi = true; tekst = tekst.slice(m[0].length).trim(); }
     // Oznaka [dva] na početku pitanja = traže se dva odgovora odvojena zarezom (samo hint ekipama)
     let dva = false;
-    const m2 = tekst.match(/^\[dva\]\s*/i);
+    const m2 = tekst.match(/^\[?\s*dva\s*\]\s*/i);
     if(m2){ dva = true; tekst = tekst.slice(m2[0].length).trim(); }
     if(!tekst || !odgovor) return;
     rezultat.push({broj: rezultat.length+1, tekst, odgovor, povezi, dva});
@@ -333,6 +334,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     const brojUKrugu = ((stanje.trenutnoPitanje-1) % poKrugu) + 1;
     const zadnjePitanjeUkupno = stanje.trenutnoPitanje >= pitanja.length;
     const zadnjeUKrugu = stanje.trenutnoPitanje % poKrugu === 0;
+    const imaPrethodno = brojUKrugu > 1; // vraćanje samo unutar trenutnog kruga
     let labelDugme = 'Sljedeće pitanje →';
     if(zadnjePitanjeUkupno) labelDugme = 'Završi i pređi na pregled →';
     else if(zadnjeUKrugu) labelDugme = `Završi Krug ${krug} i pređi na pregled →`;
@@ -349,6 +351,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
         <button class="btn" id="startTimerBtn">▶ Pokreni tajmer</button>
       </div>
       <div class="btnrow" style="justify-content:center">
+        ${imaPrethodno ? `<button class="btn" id="prevBtn">← Prethodno pitanje</button>` : ''}
         <button class="btn primary" id="nextBtn">${labelDugme}</button>
       </div>
     </div>`;
@@ -356,6 +359,10 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     document.getElementById('startTimerBtn').onclick = async ()=>{
       const sek = parseInt(document.getElementById('tsec2').value)||stanje.timerSekunde;
       await stanjeRef.update({timerSekunde:sek, timerKraj:Date.now()+sek*1000});
+    };
+    const prevBtn = document.getElementById('prevBtn');
+    if(prevBtn) prevBtn.onclick = async ()=>{
+      await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje-1, timerKraj:null});
     };
     document.getElementById('nextBtn').onclick = async ()=>{
       if(zadnjeUKrugu){
