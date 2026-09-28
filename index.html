@@ -128,8 +128,12 @@ function parsirajPitanja(sirovoTekst){
     let povezi = false;
     const m = tekst.match(/^\[povezi\]\s*/i);
     if(m){ povezi = true; tekst = tekst.slice(m[0].length).trim(); }
+    // Oznaka [dva] na početku pitanja = traže se dva odgovora odvojena zarezom (samo hint ekipama)
+    let dva = false;
+    const m2 = tekst.match(/^\[dva\]\s*/i);
+    if(m2){ dva = true; tekst = tekst.slice(m2[0].length).trim(); }
     if(!tekst || !odgovor) return;
-    rezultat.push({broj: rezultat.length+1, tekst, odgovor, povezi});
+    rezultat.push({broj: rezultat.length+1, tekst, odgovor, povezi, dva});
   });
   return rezultat;
 }
@@ -541,6 +545,7 @@ function pokreniEkipu(){
     const docId = brojP+'_'+mojaBoja;
     const pTrenutno = pitanja.find(x=>x.broj===brojP);
     const jePovezi = !!(pTrenutno && pTrenutno.povezi);
+    const jeDva = !!(pTrenutno && pTrenutno.dva);
     odgovoriRef.doc(docId).get().then(snap=>{
       const poslato = snap.exists;
       app.innerHTML = `<div class="wrap">${bedz()}
@@ -552,6 +557,7 @@ function pokreniEkipu(){
         ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>` :
           `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
            ${jePovezi ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši 4 pojma odvojena zarezom</p>` : ''}
+           ${jeDva ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši dva odgovora odvojena zarezom</p>` : ''}
            <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
       </div>`;
       if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
