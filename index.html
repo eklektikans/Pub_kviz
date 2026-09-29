@@ -538,7 +538,7 @@ function pokreniEkipu(){
 
   function crtajBirajBoju(){
     const t = timovi || {};
-    app.innerHTML = `<div class="wrap"><h1>Odaberi svoju boju</h1><div class="bojegrid">
+    app.innerHTML = `<div class="wrap"><h1>Odaberi boju ekipe</h1><div class="bojegrid">
       ${BOJE.map(b=>`<button class="bojebtn" style="background:${b.hex};color:${tamnoText(b.key)}" data-k="${b.key}" ${t[b.key]?'disabled':''}>${b.naziv}${t[b.key]?' (zauzeto)':''}</button>`).join('')}
     </div></div>`;
     document.querySelectorAll('.bojebtn').forEach(btn=>{
