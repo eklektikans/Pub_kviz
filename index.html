@@ -538,7 +538,7 @@ function pokreniEkipu(){
 
   function crtajBirajBoju(){
     const t = timovi || {};
-    app.innerHTML = `<div class="wrap"><h1>Odaberi boju ekipe</h1><div class="bojegrid">
+    app.innerHTML = `<div class="wrap"><h1>Odaberi  boju ekipe</h1><div class="bojegrid">
       ${BOJE.map(b=>`<button class="bojebtn" style="background:${b.hex};color:${tamnoText(b.key)}" data-k="${b.key}" ${t[b.key]?'disabled':''}>${b.naziv}${t[b.key]?' (zauzeto)':''}</button>`).join('')}
     </div></div>`;
     document.querySelectorAll('.bojebtn').forEach(btn=>{
@@ -601,7 +601,7 @@ function pokreniEkipu(){
           `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
            ${staviznak}
            <div id="greskaSlanje" style="color:var(--bad);text-align:center;margin-top:8px;display:none">Greška pri slanju, pokušaj ponovo.</div>
-           <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
+           <div class="btnrow" style="justify-content:center"><button class="btn success" id="posaljiBtn">Pošalji odgovor</button></div>`}
       </div>`;
       if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
       vezistiPromjenuBoje();
@@ -633,7 +633,7 @@ function pokreniEkipu(){
             <textarea id="odgTxt2" rows="3">${escapeHtml(snap.data().tekst)}</textarea>
             ${staviznak}
             <div id="greskaSlanje2" style="color:var(--bad);text-align:center;margin-top:8px;display:none">Greška pri slanju, pokušaj ponovo.</div>
-            <div class="btnrow"><button class="btn primary" id="posaljiBtn2">Snimi izmjenu</button></div>
+            <div class="btnrow" style="justify-content:center"><button class="btn success" id="posaljiBtn2">Snimi izmjenu</button></div>
           </div>`;
           if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
           vezistiPromjenuBoje();
