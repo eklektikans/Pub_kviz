@@ -64,6 +64,7 @@
   .oznaka-krug { background:#0891b2; color:#fff; padding:8px 20px; border-radius:24px; font-weight:800; font-size:clamp(0.95rem,3vw,1.15rem); font-family:'Inter',sans-serif; white-space:nowrap; }
   .oznaka-pitanje { background:#7c3aed; color:#fff; padding:8px 20px; border-radius:24px; font-weight:800; font-size:clamp(0.95rem,3vw,1.15rem); font-family:'Inter',sans-serif; white-space:nowrap; }
   .oznaka-krug.veliko, .oznaka-pitanje.veliko { font-size:clamp(1.3rem,4.5vw,1.75rem); padding:10px 26px; }
+  .oznaka-tip { background:var(--gold); color:#171225; padding:8px 20px; border-radius:24px; font-weight:800; font-size:clamp(0.95rem,3vw,1.15rem); font-family:'Inter',sans-serif; white-space:nowrap; }
   .rangred { padding:18px 24px; border-radius:12px; margin-bottom:10px; font-size:1.3rem; font-weight:700; display:flex; align-items:center; gap:14px; font-family:'Inter',sans-serif; box-shadow:0 8px 18px rgba(0,0,0,.3); }
   .rangred.mojtim { outline:4px solid var(--gold); }
   .mjesto { font-weight:900; width:36px; }
@@ -187,7 +188,7 @@ function pokreniTimerPrikaz(krajMs, elId){
 
 async function osiguraStanje(){
   const s = await stanjeRef.get();
-  if(!s.exists) await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1, krug:1});
+  if(!s.exists) await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, timerPauzaSekunde:null, pregledPitanje:1, krug:1});
   const t = await timoviRef.get();
   if(!t.exists){ const init={}; BOJE.forEach(b=>init[b.key]=false); await timoviRef.set(init); }
   const p = await pitanjaRef.get();
@@ -201,7 +202,14 @@ if(ULOGA==='nastavnik'){
   fsBtn.className = 'btn';
   fsBtn.textContent = '⛶';
   fsBtn.title = 'Cijeli ekran';
-  fsBtn.onclick = ()=> document.documentElement.requestFullscreen().catch(()=>{});
+  fsBtn.onclick = ()=>{
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    else document.documentElement.requestFullscreen().catch(()=>{});
+  };
+  document.addEventListener('fullscreenchange', ()=>{
+    fsBtn.textContent = document.fullscreenElement ? '⛝' : '⛶';
+    fsBtn.title = document.fullscreenElement ? 'Izađi iz cijelog ekrana' : 'Cijeli ekran';
+  });
   document.body.appendChild(fsBtn);
 
   const resetBtnGlobal = document.createElement('button');
@@ -210,14 +218,15 @@ if(ULOGA==='nastavnik'){
   resetBtnGlobal.textContent = '🗑';
   resetBtnGlobal.title = 'Resetuj kviz';
   resetBtnGlobal.onclick = async ()=>{
-    if(!confirm('Sigurno resetovati kviz, boje ekipa i sve odgovore?')) return;
+    const unos = prompt('Ovo NEPOVRATNO briše sve odgovore, bodove i boje ekipa. Upiši DA da potvrdiš reset kviza:');
+    if(unos !== 'DA') return;
     const batch = db.batch();
     const odg = await odgovoriRef.get();
     odg.forEach(d=>batch.delete(d.ref));
     await batch.commit();
     const init={}; BOJE.forEach(b=>init[b.key]=false);
     await timoviRef.set(init);
-    await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, pregledPitanje:1, krug:1});
+    await stanjeRef.set({trenutnoPitanje:0, faza:'cekanje', timerSekunde:45, timerKraj:null, timerPauzaSekunde:null, pregledPitanje:1, krug:1});
   };
   document.body.appendChild(resetBtnGlobal);
 
@@ -272,10 +281,16 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     const ta = document.getElementById('pitanjaText');
     function osvjeziBrojac(){
       const parsed = parsirajPitanja(ta.value);
-      const linije = ta.value.split('\n').map(r=>r.trim()).filter(r=>r.length>0);
-      const nevalidnih = linije.length - parsed.length;
+      const sveLinije = ta.value.split('\n');
+      const problematicni = [];
+      sveLinije.forEach((red, i)=>{
+        const linija = red.trim();
+        if(!linija) return;
+        const idx = linija.indexOf('|');
+        if(idx === -1 || !linija.slice(0,idx).trim() || !linija.slice(idx+1).trim()) problematicni.push(i+1);
+      });
       document.getElementById('brojValidnih').textContent = `✓ ${parsed.length} validnih pitanja` +
-        (nevalidnih>0 ? ` · ⚠ ${nevalidnih} red(ova) bez '|' — biće preskočeni` : '');
+        (problematicni.length>0 ? ` · ⚠ red(ovi) ${problematicni.join(', ')} nemaju '|' ili im nedostaje tekst/odgovor — biće preskočeni` : '');
     }
     ta.oninput = osvjeziBrojac;
     osvjeziBrojac();
@@ -324,7 +339,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     document.getElementById('urediBtn').onclick = ()=>{ uredjivanje=true; crtaj(); };
     document.getElementById('startBtn').onclick = async ()=>{
       const sek = parseInt(document.getElementById('tsec').value)||45;
-      await stanjeRef.update({trenutnoPitanje:1, faza:'aktivno', timerSekunde:sek, timerKraj:null, krug:1});
+      await stanjeRef.update({trenutnoPitanje:1, faza:'aktivno', timerSekunde:sek, timerKraj:null, timerPauzaSekunde:null, krug:1});
     };
   }
 
@@ -344,11 +359,14 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
         <span class="oznaka-pitanje veliko">Pitanje ${brojUKrugu} / ${poKrugu}</span>
       </div>
       <div class="pitanje">${p ? p.tekst : '(pitanje nije pronađeno)'}</div>
-      ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
+      ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` :
+        stanje.timerPauzaSekunde ? `<div class="timer" style="color:var(--muted)">⏸ Pauzirano — ${stanje.timerPauzaSekunde}s</div>` : ''}
       <details class="odgovor-ref"><summary>Prikaži tačan odgovor</summary>${p ? p.odgovor : ''}</details>
       <div class="btnrow" style="justify-content:center">
         <label>Vrijeme odgovora: <input id="tsec2" type="number" value="${stanje.timerSekunde}" min="5" style="width:80px"></label>
-        <button class="btn" id="startTimerBtn">▶ Pokreni tajmer</button>
+        ${stanje.timerKraj ? `<button class="btn" id="pauzaTimerBtn">⏸ Pauziraj</button>` :
+          stanje.timerPauzaSekunde ? `<button class="btn" id="nastaviTimerBtn">▶ Nastavi (${stanje.timerPauzaSekunde}s)</button>` : ''}
+        <button class="btn ${stanje.timerKraj||stanje.timerPauzaSekunde ? '' : 'primary'}" id="startTimerBtn">▶ Pokreni novi tajmer</button>
       </div>
       <div class="btnrow" style="justify-content:center">
         ${imaPrethodno ? `<button class="btn" id="prevBtn">← Prethodno pitanje</button>` : ''}
@@ -358,18 +376,27 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
     if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
     document.getElementById('startTimerBtn').onclick = async ()=>{
       const sek = parseInt(document.getElementById('tsec2').value)||stanje.timerSekunde;
-      await stanjeRef.update({timerSekunde:sek, timerKraj:Date.now()+sek*1000});
+      await stanjeRef.update({timerSekunde:sek, timerKraj:Date.now()+sek*1000, timerPauzaSekunde:null});
+    };
+    const pauzaBtn = document.getElementById('pauzaTimerBtn');
+    if(pauzaBtn) pauzaBtn.onclick = async ()=>{
+      const ostatak = Math.max(0, Math.round((stanje.timerKraj - Date.now())/1000));
+      await stanjeRef.update({timerKraj:null, timerPauzaSekunde:ostatak});
+    };
+    const nastaviBtn = document.getElementById('nastaviTimerBtn');
+    if(nastaviBtn) nastaviBtn.onclick = async ()=>{
+      await stanjeRef.update({timerKraj:Date.now()+stanje.timerPauzaSekunde*1000, timerPauzaSekunde:null});
     };
     const prevBtn = document.getElementById('prevBtn');
     if(prevBtn) prevBtn.onclick = async ()=>{
-      await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje-1, timerKraj:null});
+      await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje-1, timerKraj:null, timerPauzaSekunde:null});
     };
     document.getElementById('nextBtn').onclick = async ()=>{
       if(zadnjeUKrugu){
         const pocetakRunde = stanje.trenutnoPitanje - poKrugu + 1;
-        await stanjeRef.update({faza:'pregled', timerKraj:null, pregledPitanje:pocetakRunde});
+        await stanjeRef.update({faza:'pregled', timerKraj:null, timerPauzaSekunde:null, pregledPitanje:pocetakRunde});
       } else {
-        await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje+1, timerKraj:null});
+        await stanjeRef.update({trenutnoPitanje: stanje.trenutnoPitanje+1, timerKraj:null, timerPauzaSekunde:null});
       }
     };
   }
@@ -387,8 +414,10 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
       const odgovori = snap.docs.map(d=>({id:d.id, ...d.data()}));
       const odgovoriliKeys = odgovori.map(o=>o.boja);
       const nijeOdgovorilo = BOJE.filter(b=>!odgovoriliKeys.includes(b.key));
+      const brOcijenjeno = odgovori.filter(o=>o.ocjena).length;
       app.innerHTML = `<div class="wrap">
-        <h2 style="text-align:center;margin-bottom:14px">Pregled odgovora</h2>
+        <h2 style="text-align:center;margin-bottom:4px">Pregled odgovora</h2>
+        <p style="text-align:center;color:var(--muted);margin:0 0 14px">Ocijenjeno ${brOcijenjeno} / ${odgovori.length} pristiglih odgovora${nijeOdgovorilo.length ? ` · ${nijeOdgovorilo.length} nije odgovorilo` : ''}</p>
         <div class="btnrow" style="justify-content:center">
           <button class="btn" id="prevQ" ${trenutno<=pocetakRunde?'disabled':''}>← Prethodno</button>
           <div class="oznaka-red" style="margin:0">
@@ -415,6 +444,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
       document.getElementById('prevQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno-1});
       document.getElementById('nextQ').onclick = ()=>stanjeRef.update({pregledPitanje:trenutno+1});
       document.getElementById('sveTacno').onclick = async ()=>{
+        if(!confirm('Označiti SVE prikazane odgovore kao tačne? Ovo prepisuje postojeće ocjene za ovo pitanje.')) return;
         const batch = db.batch();
         odgovori.forEach(o=>batch.update(odgovoriRef.doc(o.id), {ocjena:'tacno'}));
         await batch.commit();
@@ -444,7 +474,7 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
       document.getElementById('natragBtn').onclick = ()=>stanjeRef.update({faza:'pregled'});
       const btnSljedeca = document.getElementById('sljedecaRundaBtn');
       if(btnSljedeca) btnSljedeca.onclick = ()=>stanjeRef.update({
-        trenutnoPitanje: krajRunde+1, faza:'aktivno', krug: krugZavrsen+1, timerKraj:null
+        trenutnoPitanje: krajRunde+1, faza:'aktivno', krug: krugZavrsen+1, timerKraj:null, timerPauzaSekunde:null
       });
     });
   }
@@ -464,9 +494,9 @@ Pitanje 2? | Odgovor 2">${escapeHtml(sirovTekst)}</textarea>
       app.innerHTML = `<div class="wrap"><h1>🏆 Konačna rang lista</h1>
         ${lista.map((t,i)=>{
           const detaljno = Array.from({length:brKrugova()}, (_,k)=>`R${k+1}: ${t.bodPoKrugu[k+1]||0}`).join(' · ');
-          return `<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)}">
-            <span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b>
-            <span style="margin-left:auto;font-weight:600;font-size:.95rem;opacity:.85">${detaljno}</span>
+          return `<div class="rangred" style="background:${t.hex};color:${tamnoText(t.key)};flex-direction:column;align-items:flex-start;gap:4px">
+            <div><span class="mjesto">${i+1}.</span> ${t.naziv} — <b>${t.bod} bodova</b></div>
+            <div style="font-weight:600;font-size:.95rem;opacity:.85">${detaljno}</div>
           </div>`;
         }).join('')}
         <div class="btnrow">
@@ -536,7 +566,7 @@ function pokreniEkipu(){
   function vezistiPromjenuBoje(){
     const el = document.getElementById('promBojaBtn');
     if(el) el.onclick = ()=>{
-      if(!confirm('Obrisati tvoj sačuvani izbor boje na ovom uređaju? Moraćeš ponovo izabrati boju.')) return;
+      if(!confirm('Obrisati tvoj sačuvani izbor boje na ovom uređaju? Moraćeš ponovo izabrati boju, a svi dosadašnji odgovori i bodovi ostaju vezani za staru boju — nećeš ih moći vratiti pod novom bojom.')) return;
       localStorage.removeItem('pubkviz_boja');
       mojaBoja = null;
       crtaj();
@@ -555,26 +585,73 @@ function pokreniEkipu(){
     const jeDva = !!(pTrenutno && pTrenutno.dva);
     odgovoriRef.doc(docId).get().then(snap=>{
       const poslato = snap.exists;
+      const staviznak = jePovezi ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši 4 pojma odvojena zarezom</p>` :
+        jeDva ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši dva odgovora odvojena zarezom</p>` : '';
       app.innerHTML = `<div class="wrap">${bedz()}
         <div class="oznaka-red">
           <span class="oznaka-krug">${krug}. Krug</span>
           <span class="oznaka-pitanje">Pitanje ${brojUKrugu} / ${poKrugu}</span>
+          ${jePovezi ? `<span class="oznaka-tip">Poveži: 4 pojma</span>` : ''}
+          ${jeDva ? `<span class="oznaka-tip">Dva odgovora</span>` : ''}
         </div>
-        ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
-        ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>` :
+        ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` :
+          stanje.timerPauzaSekunde ? `<div class="timer" style="color:var(--muted)">⏸ Pauzirano</div>` : ''}
+        ${poslato ? `<div class="poslato">✅ Odgovor poslan</div>
+           <div class="btnrow" style="justify-content:center"><button class="btn" id="izmijeniBtn">✏️ Izmijeni odgovor</button></div>` :
           `<textarea id="odgTxt" rows="3" placeholder="Upiši odgovor..."></textarea>
-           ${jePovezi ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši 4 pojma odvojena zarezom</p>` : ''}
-           ${jeDva ? `<p style="color:var(--muted);text-align:center;margin:8px 0 0">Upiši dva odgovora odvojena zarezom</p>` : ''}
+           ${staviznak}
+           <div id="greskaSlanje" style="color:var(--bad);text-align:center;margin-top:8px;display:none">Greška pri slanju, pokušaj ponovo.</div>
            <div class="btnrow"><button class="btn primary" id="posaljiBtn">Pošalji</button></div>`}
       </div>`;
       if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
       vezistiPromjenuBoje();
       if(!poslato){
-        document.getElementById('posaljiBtn').onclick = async ()=>{
-          const txt = document.getElementById('odgTxt').value.trim();
+        const ta = document.getElementById('odgTxt');
+        ta.focus();
+        const posaljiBtn = document.getElementById('posaljiBtn');
+        posaljiBtn.onclick = async ()=>{
+          const txt = ta.value.trim();
           if(!txt) return;
-          await odgovoriRef.doc(docId).set({pitanje:brojP, boja:mojaBoja, tekst:txt, ocjena:null});
-          crtajPitanje();
+          posaljiBtn.disabled = true;
+          try{
+            await odgovoriRef.doc(docId).set({pitanje:brojP, boja:mojaBoja, tekst:txt, ocjena:null});
+            crtajPitanje();
+          }catch(e){
+            posaljiBtn.disabled = false;
+            document.getElementById('greskaSlanje').style.display = 'block';
+          }
+        };
+      } else {
+        const izmBtn = document.getElementById('izmijeniBtn');
+        if(izmBtn) izmBtn.onclick = ()=>{
+          app.innerHTML = `<div class="wrap">${bedz()}
+            <div class="oznaka-red">
+              <span class="oznaka-krug">${krug}. Krug</span>
+              <span class="oznaka-pitanje">Pitanje ${brojUKrugu} / ${poKrugu}</span>
+            </div>
+            ${stanje.timerKraj ? `<div class="timer">⏱ <span id="timerNum"></span></div>` : ''}
+            <textarea id="odgTxt2" rows="3">${escapeHtml(snap.data().tekst)}</textarea>
+            ${staviznak}
+            <div id="greskaSlanje2" style="color:var(--bad);text-align:center;margin-top:8px;display:none">Greška pri slanju, pokušaj ponovo.</div>
+            <div class="btnrow"><button class="btn primary" id="posaljiBtn2">Snimi izmjenu</button></div>
+          </div>`;
+          if(stanje.timerKraj) pokreniTimerPrikaz(stanje.timerKraj, 'timerNum');
+          vezistiPromjenuBoje();
+          const ta2 = document.getElementById('odgTxt2');
+          ta2.focus();
+          const btn2 = document.getElementById('posaljiBtn2');
+          btn2.onclick = async ()=>{
+            const txt = ta2.value.trim();
+            if(!txt) return;
+            btn2.disabled = true;
+            try{
+              await odgovoriRef.doc(docId).set({pitanje:brojP, boja:mojaBoja, tekst:txt, ocjena:null});
+              crtajPitanje();
+            }catch(e){
+              btn2.disabled = false;
+              document.getElementById('greskaSlanje2').style.display = 'block';
+            }
+          };
         };
       }
     });
